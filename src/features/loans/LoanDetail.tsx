@@ -31,6 +31,7 @@ const LoanDetail = () => {
   const [openRepaymentDialog, setOpenRepaymentDialog] = useState(false);
   const [repaymentAmount, setRepaymentAmount] = useState('');
   const [repaymentNotes, setRepaymentNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!loan) {
     return (
@@ -42,31 +43,47 @@ const LoanDetail = () => {
 
   const outstanding = loan.amount - loan.totalRepaid;
 
-  const handleAddRepayment = () => {
+  const handleAddRepayment = async () => {
     if (!repaymentAmount || parseFloat(repaymentAmount) <= 0) {
       alert('Please enter a valid amount');
       return;
     }
 
-    const repayment = {
-      id: `rep_${Date.now()}`,
-      loanId: loan.id,
-      amount: parseFloat(repaymentAmount),
-      date: formatISO(new Date()),
-      notes: repaymentNotes,
-      createdAt: formatISO(new Date()),
-    };
+    try {
+      setIsSubmitting(true);
+      const repayment = {
+        id: `rep_${Date.now()}`,
+        loanId: loan.id,
+        amount: parseFloat(repaymentAmount),
+        date: formatISO(new Date()),
+        notes: repaymentNotes,
+        createdAt: formatISO(new Date()),
+      };
 
-    addRepayment(loan.id, repayment);
-    setRepaymentAmount('');
-    setRepaymentNotes('');
-    setOpenRepaymentDialog(false);
+      await addRepayment(loan.id, repayment);
+      setRepaymentAmount('');
+      setRepaymentNotes('');
+      setOpenRepaymentDialog(false);
+    } catch (error) {
+      alert('Failed to add repayment');
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDeleteLoan = () => {
+  const handleDeleteLoan = async () => {
     if (confirm('Are you sure you want to delete this loan?')) {
-      deleteLoan(loan.id);
-      navigate('/');
+      try {
+        setIsSubmitting(true);
+        await deleteLoan(loan.id);
+        navigate('/');
+      } catch (error) {
+        alert('Failed to delete loan');
+        console.error(error);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -74,13 +91,13 @@ const LoanDetail = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static">
         <Toolbar>
-          <IconButton color="inherit" onClick={() => navigate('/')}>
+          <IconButton color="inherit" onClick={() => navigate('/')} disabled={isSubmitting}>
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h6" sx={{ flex: 1 }}>
             {loan.contactName}
           </Typography>
-          <IconButton color="inherit" onClick={handleDeleteLoan}>
+          <IconButton color="inherit" onClick={handleDeleteLoan} disabled={isSubmitting}>
             <DeleteIcon />
           </IconButton>
         </Toolbar>
@@ -189,11 +206,11 @@ const LoanDetail = () => {
             sx={{ mb: 3 }}
           />
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button fullWidth onClick={() => setOpenRepaymentDialog(false)}>
+            <Button fullWidth onClick={() => setOpenRepaymentDialog(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button fullWidth variant="contained" onClick={handleAddRepayment}>
-              Save
+            <Button fullWidth variant="contained" onClick={handleAddRepayment} disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save'}
             </Button>
           </Box>
         </Box>

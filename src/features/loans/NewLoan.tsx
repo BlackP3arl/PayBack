@@ -53,7 +53,7 @@ const NewLoan = () => {
         updatedAt: formatISO(new Date()),
       };
 
-      addLoan(loan);
+      await addLoan(loan);
 
       navigate('/');
     } catch (error) {
