@@ -32,7 +32,7 @@ export const LoanSummaryScreen: React.FC = () => {
 
     return (
       <Card
-        style={styles.card}
+        style={[styles.card, overdue && styles.overdueCard]}
         onPress={() => navigation.navigate('LoanDetail', { loanId: item.id })}
       >
         <Card.Content>
@@ -172,6 +172,11 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 12,
+  },
+  overdueCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#B00020',
+    backgroundColor: '#FFEBEE',
   },
   cardHeader: {
     flexDirection: 'row',
