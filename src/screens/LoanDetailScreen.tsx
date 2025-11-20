@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, Image } from 'react-native';
-import { Card, Text, FAB, Divider, Chip, List } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, Image, Linking, Alert } from 'react-native';
+import { Card, Text, FAB, Divider, Chip, List, Button, IconButton } from 'react-native-paper';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStore } from '../store';
 import { RootStackParamList, Repayment } from '../types';
-import { formatCurrency, formatDate, isOverdue } from '../utils/format';
+import { formatCurrency, formatDate, isOverdue, isImageFile, isPdfFile, getFileName } from '../utils/format';
 
 type LoanDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoanDetail'>;
 type LoanDetailRouteProp = RouteProp<RootStackParamList, 'LoanDetail'>;
@@ -28,6 +28,14 @@ export const LoanDetailScreen: React.FC = () => {
   }
 
   const overdue = isOverdue(loan.dueDate) && loan.balanceDue > 0;
+
+  const openAttachment = async (uri: string) => {
+    try {
+      await Linking.openURL(uri);
+    } catch (error) {
+      Alert.alert('Error', 'Could not open document');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -95,13 +103,37 @@ export const LoanDetailScreen: React.FC = () => {
               <>
                 <Divider style={styles.divider} />
                 <Text variant="bodyLarge" style={styles.label}>
-                  Receipt:
+                  {isPdfFile(loan.attachmentUri) ? 'Document:' : 'Receipt:'}
                 </Text>
-                <Image
-                  source={{ uri: loan.attachmentUri }}
-                  style={styles.image}
-                  resizeMode="cover"
-                />
+                {isImageFile(loan.attachmentUri) ? (
+                  <Image
+                    source={{ uri: loan.attachmentUri }}
+                    style={styles.image}
+                    resizeMode="cover"
+                  />
+                ) : isPdfFile(loan.attachmentUri) ? (
+                  <Card style={styles.pdfCard}>
+                    <Card.Content style={styles.pdfContent}>
+                      <IconButton
+                        icon="file-pdf-box"
+                        size={40}
+                        iconColor="#B00020"
+                      />
+                      <View style={styles.pdfInfo}>
+                        <Text variant="bodyMedium" style={styles.pdfName}>
+                          {getFileName(loan.attachmentUri)}
+                        </Text>
+                        <Button
+                          mode="text"
+                          onPress={() => openAttachment(loan.attachmentUri!)}
+                          compact
+                        >
+                          View PDF
+                        </Button>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                ) : null}
               </>
             )}
           </Card.Content>
@@ -190,11 +222,37 @@ export const LoanDetailScreen: React.FC = () => {
                       )}
 
                       {repayment.attachmentUri && (
-                        <Image
-                          source={{ uri: repayment.attachmentUri }}
-                          style={styles.repaymentImage}
-                          resizeMode="cover"
-                        />
+                        <>
+                          {isImageFile(repayment.attachmentUri) ? (
+                            <Image
+                              source={{ uri: repayment.attachmentUri }}
+                              style={styles.repaymentImage}
+                              resizeMode="cover"
+                            />
+                          ) : isPdfFile(repayment.attachmentUri) ? (
+                            <Card style={styles.repaymentPdfCard}>
+                              <Card.Content style={styles.pdfContent}>
+                                <IconButton
+                                  icon="file-pdf-box"
+                                  size={32}
+                                  iconColor="#B00020"
+                                />
+                                <View style={styles.pdfInfo}>
+                                  <Text variant="bodySmall" style={styles.pdfName}>
+                                    {getFileName(repayment.attachmentUri)}
+                                  </Text>
+                                  <Button
+                                    mode="text"
+                                    onPress={() => openAttachment(repayment.attachmentUri!)}
+                                    compact
+                                  >
+                                    View PDF
+                                  </Button>
+                                </View>
+                              </Card.Content>
+                            </Card>
+                          ) : null}
+                        </>
                       )}
                     </View>
                   </View>
@@ -270,6 +328,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 8,
   },
+  pdfCard: {
+    backgroundColor: '#f8f8f8',
+    marginTop: 8,
+  },
+  pdfContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  pdfInfo: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  pdfName: {
+    fontWeight: '500',
+    marginBottom: 4,
+  },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -330,6 +405,10 @@ const styles = StyleSheet.create({
     height: 150,
     marginTop: 8,
     borderRadius: 8,
+  },
+  repaymentPdfCard: {
+    backgroundColor: '#f8f8f8',
+    marginTop: 8,
   },
   repaymentDivider: {
     marginVertical: 8,

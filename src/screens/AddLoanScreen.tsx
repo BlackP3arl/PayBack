@@ -6,6 +6,7 @@ import {
   Alert,
   Image,
   Platform,
+  Linking,
 } from 'react-native';
 import {
   TextInput,
@@ -17,10 +18,11 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useStore } from '../store';
 import { RootStackParamList } from '../types';
-import { isValidAmount, parseCurrencyInput } from '../utils/format';
+import { isValidAmount, parseCurrencyInput, isImageFile, isPdfFile, getFileName } from '../utils/format';
 
 type AddLoanScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddLoan'>;
 type AddLoanScreenRouteProp = RouteProp<RootStackParamList, 'AddLoan'>;
@@ -88,6 +90,22 @@ export const AddLoanScreen: React.FC = () => {
     }
   };
 
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setAttachmentUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Document picker error:', error);
+      Alert.alert('Error', 'Failed to pick document');
+    }
+  };
+
   const removeAttachment = () => {
     setAttachmentUri(undefined);
   };
@@ -131,12 +149,23 @@ export const AddLoanScreen: React.FC = () => {
     }
   };
 
-  const showImageOptions = () => {
-    Alert.alert('Add Receipt', 'Choose an option', [
+  const showAttachmentOptions = () => {
+    Alert.alert('Add Receipt/Document', 'Choose an option', [
       { text: 'Take Photo', onPress: takePhoto },
-      { text: 'Choose from Library', onPress: pickImage },
+      { text: 'Choose Photo', onPress: pickImage },
+      { text: 'Choose PDF', onPress: pickDocument },
       { text: 'Cancel', style: 'cancel' },
     ]);
+  };
+
+  const openAttachment = async () => {
+    if (attachmentUri) {
+      try {
+        await Linking.openURL(attachmentUri);
+      } catch (error) {
+        Alert.alert('Error', 'Could not open document');
+      }
+    }
   };
 
   return (
@@ -220,27 +249,61 @@ export const AddLoanScreen: React.FC = () => {
 
           <View style={styles.attachmentSection}>
             <Text variant="labelLarge" style={styles.attachmentLabel}>
-              Attach Receipt (Optional)
+              Attach Receipt/Document (Optional)
             </Text>
 
             {attachmentUri ? (
-              <View style={styles.imagePreview}>
-                <Image source={{ uri: attachmentUri }} style={styles.image} />
-                <IconButton
-                  icon="close-circle"
-                  size={24}
-                  onPress={removeAttachment}
-                  style={styles.removeButton}
-                />
+              <View style={styles.attachmentPreview}>
+                {isImageFile(attachmentUri) ? (
+                  <View style={styles.imagePreview}>
+                    <Image source={{ uri: attachmentUri }} style={styles.image} />
+                    <IconButton
+                      icon="close-circle"
+                      size={24}
+                      onPress={removeAttachment}
+                      style={styles.removeButton}
+                    />
+                  </View>
+                ) : isPdfFile(attachmentUri) ? (
+                  <View style={styles.pdfPreview}>
+                    <Card style={styles.pdfCard}>
+                      <Card.Content style={styles.pdfContent}>
+                        <IconButton
+                          icon="file-pdf-box"
+                          size={40}
+                          iconColor="#B00020"
+                        />
+                        <View style={styles.pdfInfo}>
+                          <Text variant="bodyMedium" style={styles.pdfName}>
+                            {getFileName(attachmentUri)}
+                          </Text>
+                          <Button
+                            mode="text"
+                            onPress={openAttachment}
+                            compact
+                          >
+                            View PDF
+                          </Button>
+                        </View>
+                      </Card.Content>
+                    </Card>
+                    <IconButton
+                      icon="close-circle"
+                      size={24}
+                      onPress={removeAttachment}
+                      style={styles.removeButton}
+                    />
+                  </View>
+                ) : null}
               </View>
             ) : (
               <Button
                 mode="outlined"
-                icon="camera"
-                onPress={showImageOptions}
+                icon="attachment"
+                onPress={showAttachmentOptions}
                 style={styles.attachButton}
               >
-                Add Receipt
+                Add Receipt/Document
               </Button>
             )}
           </View>
@@ -300,14 +363,35 @@ const styles = StyleSheet.create({
   attachButton: {
     marginTop: 8,
   },
-  imagePreview: {
+  attachmentPreview: {
     marginTop: 8,
+  },
+  imagePreview: {
     position: 'relative',
   },
   image: {
     width: '100%',
     height: 200,
     borderRadius: 8,
+  },
+  pdfPreview: {
+    position: 'relative',
+  },
+  pdfCard: {
+    backgroundColor: '#f8f8f8',
+  },
+  pdfContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  pdfInfo: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  pdfName: {
+    fontWeight: '500',
+    marginBottom: 4,
   },
   removeButton: {
     position: 'absolute',

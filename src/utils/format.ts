@@ -98,3 +98,33 @@ export const truncateText = (text: string, maxLength: number = 50): string => {
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength - 3) + '...';
 };
+
+/**
+ * Check if a file URI is an image
+ * @param uri - The file URI to check
+ * @returns True if the file is an image
+ */
+export const isImageFile = (uri: string): boolean => {
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+  const lowerUri = uri.toLowerCase();
+  return imageExtensions.some(ext => lowerUri.endsWith(ext));
+};
+
+/**
+ * Check if a file URI is a PDF
+ * @param uri - The file URI to check
+ * @returns True if the file is a PDF
+ */
+export const isPdfFile = (uri: string): boolean => {
+  return uri.toLowerCase().endsWith('.pdf');
+};
+
+/**
+ * Get the file name from a URI
+ * @param uri - The file URI
+ * @returns The file name
+ */
+export const getFileName = (uri: string): string => {
+  const parts = uri.split('/');
+  return parts[parts.length - 1] || 'document';
+};
