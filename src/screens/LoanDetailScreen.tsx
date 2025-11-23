@@ -108,7 +108,7 @@ export const LoanDetailScreen: React.FC = () => {
         </Card>
 
         {/* Payment Summary Card */}
-        <Card style={styles.card}>
+        <Card style={[styles.card, overdue && styles.overdueCard]}>
           <Card.Content>
             <Text variant="titleLarge" style={styles.sectionTitle}>
               Payment Summary
@@ -233,6 +233,11 @@ const styles = StyleSheet.create({
     margin: 16,
     marginBottom: 0,
     marginTop: 16,
+  },
+  overdueCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#B00020',
+    backgroundColor: '#FFEBEE',
   },
   sectionTitle: {
     fontWeight: 'bold',

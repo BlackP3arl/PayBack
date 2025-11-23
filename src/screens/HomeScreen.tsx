@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStore } from '../store';
 import { RootStackParamList, ContactWithLoans } from '../types';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, isOverdue } from '../utils/format';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -37,31 +37,55 @@ export const HomeScreen: React.FC = () => {
   // Sort by total due amount (highest first)
   const sortedContacts = filteredContacts.sort((a, b) => b.totalDue - a.totalDue);
 
-  const renderContactItem = ({ item }: { item: ContactWithLoans }) => (
-    <Card
-      style={styles.card}
-      onPress={() => navigation.navigate('LoanSummary', {
-        contactId: item.id,
-        contactName: item.name,
-      })}
-    >
-      <Card.Content>
-        <View style={styles.cardHeader}>
-          <Text variant="titleMedium" style={styles.contactName}>
-            {item.name}
-          </Text>
-          <Text variant="titleMedium" style={styles.amount}>
-            {formatCurrency(item.totalDue)}
-          </Text>
-        </View>
-        <View style={styles.cardFooter}>
-          <Chip icon="file-document-outline" compact>
-            {item.loans.length} {item.loans.length === 1 ? 'loan' : 'loans'}
-          </Chip>
-        </View>
-      </Card.Content>
-    </Card>
-  );
+  // Check if a contact has any overdue loans
+  const hasOverdueLoans = (contact: ContactWithLoans): boolean => {
+    return contact.loans.some(
+      (loan) => isOverdue(loan.dueDate) && loan.balanceDue > 0
+    );
+  };
+
+  const renderContactItem = ({ item }: { item: ContactWithLoans }) => {
+    const hasOverdue = hasOverdueLoans(item);
+
+    return (
+      <Card
+        style={[styles.card, hasOverdue && styles.overdueCard]}
+        onPress={() => navigation.navigate('LoanSummary', {
+          contactId: item.id,
+          contactName: item.name,
+        })}
+      >
+        <Card.Content>
+          <View style={styles.cardHeader}>
+            <Text variant="titleMedium" style={styles.contactName}>
+              {item.name}
+            </Text>
+            <Text variant="titleMedium" style={[
+              styles.amount,
+              hasOverdue && styles.overdueAmount
+            ]}>
+              {formatCurrency(item.totalDue)}
+            </Text>
+          </View>
+          <View style={styles.cardFooter}>
+            <Chip icon="file-document-outline" compact>
+              {item.loans.length} {item.loans.length === 1 ? 'loan' : 'loans'}
+            </Chip>
+            {hasOverdue && (
+              <Chip
+                icon="alert-circle"
+                compact
+                style={styles.overdueChip}
+                textStyle={styles.overdueChipText}
+              >
+                Overdue
+              </Chip>
+            )}
+          </View>
+        </Card.Content>
+      </Card>
+    );
+  };
 
   if (isLoading && contactsWithLoans.length === 0) {
     return (
@@ -159,6 +183,11 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 12,
   },
+  overdueCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#B00020',
+    backgroundColor: '#FFEBEE',
+  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -173,9 +202,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#6200EE',
   },
+  overdueAmount: {
+    color: '#B00020',
+  },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
+    gap: 8,
+  },
+  overdueChip: {
+    backgroundColor: '#B00020',
+  },
+  overdueChipText: {
+    color: '#fff',
   },
   emptyContainer: {
     flex: 1,
