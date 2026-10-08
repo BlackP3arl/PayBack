@@ -49,17 +49,25 @@ export const useLoanStore = create<LoanState>((set, get) => ({
 
   addRepayment: async (loanId, repayment) => {
     await db.addRepayment(repayment);
+    const current = get().loans.find((loan) => loan.id === loanId);
+    if (!current) {
+      return;
+    }
+
+    const totalRepaid = (current.totalRepaid || 0) + repayment.amount;
+    const status: Loan['status'] =
+      totalRepaid >= current.amount ? 'repaid' : totalRepaid > 0 ? 'partial' : 'pending';
+    const updatedLoan: Loan = {
+      ...current,
+      repayments: [...(current.repayments || []), repayment],
+      totalRepaid,
+      status,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await db.updateLoan(updatedLoan);
     set((state) => ({
-      loans: state.loans.map((loan) => {
-        if (loan.id === loanId) {
-          return {
-            ...loan,
-            repayments: [...(loan.repayments || []), repayment],
-            totalRepaid: (loan.totalRepaid || 0) + repayment.amount,
-          };
-        }
-        return loan;
-      }),
+      loans: state.loans.map((loan) => (loan.id === loanId ? updatedLoan : loan)),
     }));
   },
 }));
