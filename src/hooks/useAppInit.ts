@@ -25,9 +25,14 @@ export const useAppInit = () => {
         const loansWithRepayments: Loan[] = await Promise.all(
           loans.map(async (loan) => {
             const repayments = await getRepaymentsByLoanId(loan.id);
+            const totalRepaid = repayments.reduce((sum, repayment) => sum + repayment.amount, 0);
+            const status: Loan['status'] =
+              totalRepaid >= loan.amount ? 'repaid' : totalRepaid > 0 ? 'partial' : 'pending';
             return {
               ...loan,
               repayments,
+              totalRepaid,
+              status,
             };
           })
         );
