@@ -51,8 +51,8 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/loans/:loanId" element={<LoanDetail />} />
           <Route path="/loans/new" element={<NewLoan />} />
+          <Route path="/loans/:loanId" element={<LoanDetail />} />
           <Route path="/404" element={<NotFound />} />
           <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
